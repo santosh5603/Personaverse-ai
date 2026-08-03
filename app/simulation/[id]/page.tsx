@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import PersonaGraph, { type GraphPersona } from "@/components/PersonaGraph";
 import RadarChart from "@/components/RadarChart";
 import ScoreDistribution from "@/components/ScoreDistribution";
+import PopulationMatrix from "@/components/PopulationMatrix";
+import ViewProjection from "@/components/ViewProjection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -111,6 +113,13 @@ export default async function SimulationPage({
     value: overall?.[d.key] ?? 0,
   }));
 
+  const scores = {
+    attention: overall?.attention ?? 0,
+    trust: overall?.trust ?? 0,
+    engagement: overall?.engagement ?? 0,
+    likelihoodToAct: overall?.likelihoodToAct ?? 0,
+  };
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-center justify-between">
@@ -151,6 +160,26 @@ export default async function SimulationPage({
           );
         })}
       </div>
+
+      {/* Predicted reach */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-lg font-semibold">Predicted reach</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <ViewProjection scores={scores} />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Population matrix */}
+      <section className="mt-6">
+        <h2 className="mb-3 text-lg font-semibold">Who responds — out of 1,000</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <PopulationMatrix scores={scores} />
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Recommendations — how to improve the input */}
       {recommendations.length > 0 && (
