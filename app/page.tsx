@@ -1,101 +1,69 @@
-import Image from "next/image";
+import Link from "next/link";
+import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Drop in content",
+    body: "Paste a YouTube URL (we grab the thumbnail) or upload an image — an ad, a Reel screenshot, a product shot.",
+  },
+  {
+    n: "02",
+    title: "Simulate 1,000 personas",
+    body: "We generate a 1,000-person audience, stratify it into segments, and run representatives through a multimodal model.",
+  },
+  {
+    n: "03",
+    title: "Read the consensus",
+    body: "Attention, trust, engagement and likelihood-to-act — plus an insight report and an explorable persona map.",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="mx-auto max-w-5xl px-4">
+      {/* Hero */}
+      <section className="flex flex-col items-center py-20 text-center md:py-28">
+        <span className="mb-4 inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
+          Multi-agent audience simulation
+        </span>
+        <h1 className="max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+          See how 1,000 people react{" "}
+          <span className="text-primary">before you post.</span>
+        </h1>
+        <p className="mt-5 max-w-xl text-lg text-muted-foreground">
+          PersonaVerse AI runs your video thumbnail or image ad past a simulated
+          audience and returns scored, segment-level feedback in seconds.
+        </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <div className="mt-8 flex gap-3">
+          <SignedIn>
+            <Button asChild size="lg">
+              <Link href="/dashboard">Open dashboard</Link>
+            </Button>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button size="lg">Get started</Button>
+            </SignInButton>
+            <Button asChild variant="outline" size="lg">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+          </SignedOut>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+
+      {/* How it works */}
+      <section className="grid gap-6 pb-24 md:grid-cols-3">
+        {STEPS.map((s) => (
+          <div key={s.n} className="rounded-xl border p-6">
+            <div className="text-sm font-semibold text-primary">{s.n}</div>
+            <h3 className="mt-2 text-lg font-semibold">{s.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{s.body}</p>
+          </div>
+        ))}
+      </section>
+    </main>
   );
 }
