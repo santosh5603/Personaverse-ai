@@ -30,7 +30,16 @@ function useCountUp(target: number, duration = 900) {
       else fromRef.current = target;
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // Safety net: rAF is paused in hidden/background tabs, so guarantee the
+    // value still lands on target (setTimeout fires even when hidden).
+    const fallback = setTimeout(() => {
+      setValue(target);
+      fromRef.current = target;
+    }, duration + 200);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(fallback);
+    };
   }, [target, duration]);
   return value;
 }

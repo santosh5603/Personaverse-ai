@@ -4,11 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HORIZONS,
   type HorizonKey,
+  computeForecast,
   horizonViews,
   makeSeries,
   viewsAt,
   formatViews,
+  METHODOLOGY,
   type Scores,
+  type Tone,
 } from "@/lib/projection";
 
 const W = 640;
@@ -23,14 +26,23 @@ function useCountUp(target: number, duration = 900) {
     const start = performance.now();
     let raf = 0;
     const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
+      const pr = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - pr, 3);
       setValue(from + (target - from) * eased);
-      if (p < 1) raf = requestAnimationFrame(tick);
+      if (pr < 1) raf = requestAnimationFrame(tick);
       else fromRef.current = target;
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // Safety net: rAF is paused in hidden/background tabs, so guarantee the
+    // value still lands on target (setTimeout fires even when hidden).
+    const fallback = setTimeout(() => {
+      setValue(target);
+      fromRef.current = target;
+    }, duration + 200);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(fallback);
+    };
   }, [target, duration]);
   return value;
 }
@@ -45,17 +57,26 @@ function xTicks(horizonDays: number): { t: number; label: string }[] {
   return [0, 90, 180, 270, 365].map((d) => ({ t: d, label: `${Math.round(d / 30)}mo` }));
 }
 
+const toneDot: Record<Tone, string> = {
+  good: "bg-green-500",
+  mid: "bg-amber-500",
+  low: "bg-red-500",
+};
+
 export default function ViewProjection({ scores }: { scores: Scores }) {
   const [horizon, setHorizon] = useState<HorizonKey>("month");
   const spec = HORIZONS.find((h) => h.key === horizon)!;
-  const totals = useMemo(() => horizonViews(scores), [scores]);
+
+  const forecast = useMemo(() => computeForecast(scores), [scores]);
+  const totals = useMemo(() => horizonViews(forecast), [forecast]);
   const headline = useCountUp(totals[horizon]);
+  const ctrShown = useCountUp(forecast.ctr);
 
   const series = useMemo(
-    () => makeSeries(scores, spec.days, 64),
-    [scores, spec.days],
+    () => makeSeries(forecast, spec.days, 64),
+    [forecast, spec.days],
   );
-  const yMax = Math.max(viewsAt(scores, spec.days), 1);
+  const yMax = Math.max(viewsAt(forecast, spec.days), 1);
 
   const plotW = W - PAD.l - PAD.r;
   const plotH = H - PAD.t - PAD.b;
@@ -63,15 +84,17 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
   const sy = (v: number) => PAD.t + plotH - (v / yMax) * plotH;
 
   const linePath = series
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.t).toFixed(1)} ${sy(p.views).toFixed(1)}`)
+    .map((pt, i) => `${i === 0 ? "M" : "L"} ${sx(pt.t).toFixed(1)} ${sy(pt.views).toFixed(1)}`)
     .join(" ");
   const areaPath = `${linePath} L ${sx(spec.days).toFixed(1)} ${sy(0)} L ${sx(0).toFixed(1)} ${sy(0)} Z`;
   const end = series[series.length - 1];
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
-    v: yMax * f,
-    y: sy(yMax * f),
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((fr) => ({
+    v: yMax * fr,
+    y: sy(yMax * fr),
   }));
+
+  const shareOfCeiling = Math.round((totals[horizon] / forecast.market) * 100);
 
   return (
     <div>
@@ -81,10 +104,11 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
             <span className="text-5xl font-bold tabular-nums tracking-tight text-primary">
               {formatViews(headline)}
             </span>
-            <span className="text-lg text-muted-foreground">views</span>
+            <span className="text-lg text-muted-foreground">projected views</span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            projected in the first {spec.label.toLowerCase()} · out of a 1,000,000 ceiling
+            in the first {spec.label.toLowerCase()} · {shareOfCeiling}% of the
+            estimated {formatViews(forecast.market)} reachable audience
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -113,7 +137,6 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
             </linearGradient>
           </defs>
 
-          {/* y gridlines + labels */}
           {yTicks.map((tk, i) => (
             <g key={i}>
               <line
@@ -137,7 +160,6 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
             </g>
           ))}
 
-          {/* x labels */}
           {xTicks(spec.days).map((tk, i) => (
             <text
               key={i}
@@ -152,7 +174,6 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
             </text>
           ))}
 
-          {/* animated area + line (key restarts the draw on horizon change) */}
           <g key={horizon}>
             <path
               d={areaPath}
@@ -179,10 +200,29 @@ export default function ViewProjection({ scores }: { scores: Scores }) {
           </g>
         </svg>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Heuristic forecast from the audience scores (attention, engagement,
-        action, trust) — a directional estimate, not a guarantee.
-      </p>
+
+      {/* Why this forecast — the derivation, shown so it isn't a black box */}
+      <div className="mt-4">
+        <p className="mb-2 text-sm font-semibold">Why this forecast?</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {forecast.factors.map((f) => (
+            <div key={f.label} className="rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{f.label}</span>
+                <span className={`h-2 w-2 rounded-full ${toneDot[f.tone]}`} />
+              </div>
+              <div className="mt-0.5 text-xl font-bold tabular-nums">
+                {f.label === "Click-through rate" ? `${ctrShown.toFixed(1)}%` : f.value}
+              </div>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                {f.detail}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs text-muted-foreground">{METHODOLOGY}</p>
     </div>
   );
 }
