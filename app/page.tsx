@@ -2,6 +2,9 @@ import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
+// Rendered dynamically so the build never needs Clerk keys to prerender it.
+export const dynamic = "force-dynamic";
+
 const STEPS = [
   {
     n: "01",

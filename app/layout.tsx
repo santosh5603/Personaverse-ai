@@ -15,6 +15,11 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+// Render the whole app dynamically. It's inherently dynamic (Clerk auth + DB),
+// and this keeps the build from prerendering pages through <ClerkProvider>,
+// so a fresh Vercel build never fails when env vars aren't present yet.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "PersonaVerse AI",
   description: "Multi-agent audience simulation for video and image content",

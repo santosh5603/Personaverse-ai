@@ -1,8 +1,18 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/simulation(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // The /api/test-* routes are unauthenticated dev scaffolding (some run the
+  // full LLM pipeline and write to the DB). Never expose them in production.
+  if (
+    process.env.NODE_ENV === "production" &&
+    req.nextUrl.pathname.startsWith("/api/test")
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
